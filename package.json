@@ -4,9 +4,6 @@
   "description": "Paska toimisit joskus",
   "author": "En myönnä <MAIL@EXAMPLE.COM>",
   "contributors": [],
-  "dependencies": {
-    "MODULE": "0.3.20"
-  },
   "peerDependencies": {
     "ep_etherpad_lite": ">=1.5.1"
   },
