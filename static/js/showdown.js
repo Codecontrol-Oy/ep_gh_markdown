@@ -1572,7 +1572,7 @@ showdown.subParser('blockQuotes', function (text, options, globals) {
 
   text = globals.converter._dispatch('blockQuotes.before', text, options, globals);
 
-  text = text.replace(/((^ {0,3}>[ \t]?.+\n(.+\n)*\n*)+)/gm, function (wholeMatch, m1) {
+  text = text.replace(/((^ {0,3}>[ \t]?.+)+)/gm, function (wholeMatch, m1) {
     var bq = m1;
 
     // attacklab: hack around Konqueror 3.5.4 bug:
@@ -1595,6 +1595,8 @@ showdown.subParser('blockQuotes', function (text, options, globals) {
       pre = pre.replace(/¨0/g, '');
       return pre;
     });
+    // Trim double whitespaces, because etherpad does not like them.
+    bq = bq.replace('  ', '');
     return showdown.subParser('hashBlock')('<blockquote>' + bq + '</blockquote>', options, globals);
   });
 
@@ -2735,11 +2737,11 @@ showdown.subParser('spanGamut', function (text, options, globals) {
     // GFM style hard breaks
     // only add line breaks if the text does not contain a block (special case for lists)
     if (!/\n\n¨K/.test(text)) {
-      text = text.replace(/\n+/g, '<br />\n');
+      text = text.replace(/\n+/g, '');
     }
   } else {
     // Vanilla hard breaks
-    text = text.replace(/  +\n/g, '<br />\n');
+    text = text.replace(/  +\n/g, '');
   }
 
   text = globals.converter._dispatch('spanGamut.after', text, options, globals);
@@ -2839,8 +2841,7 @@ showdown.subParser('tables', function (text, options, globals) {
       id = ' id="' + header.replace(/ /g, '_').toLowerCase() + '"';
     }
     header = showdown.subParser('spanGamut')(header, options, globals);
-
-    return '<th' + id + style + '>' + header + '</th>\n';
+    return '<th id="' + id + style + '>' + header + '</th>\n';
   }
 
   function parseCells (cell, style) {

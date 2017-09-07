@@ -2,6 +2,7 @@ var underscore = require('ep_etherpad-lite/static/js/underscore');
 var padeditor = require('ep_etherpad-lite/static/js/pad_editor').padeditor;
 var padEditor;
 var state = 0;
+
 exports.aceInitialized = function(hook, context){
   var editorInfo = context.editorInfo;
   editorInfo.ace_addImage = underscore(image.addImage).bind(context);
@@ -11,25 +12,29 @@ exports.aceInitialized = function(hook, context){
 function toggleMarkdown(context, $inner) {
   var converter = new showdown.Converter();
       converter.setFlavor('github');
-  // State == 0 Toggle markdown on
-  // else toggle off
+  // State == 0 Convert md to html
+  // else html to md
   if (state == 0) {
     var contents = [];
     // Map through each magicdiv within ace body and get the text
     $inner.children('div').each(function () {
       var text = $(this).text();
-      if (~text.indexOf("#") || text === '') text += '<br>';
+      text = text.replace(/(>\s*)(-)/, '$1&ndash;');
       contents.push(text);
+      
+      if (~text.indexOf("#") || text === '') contents.push('<p></p>');
+      console.log(text);
     });
     // Join the text and convert to html with showdown lib
     contents = contents.join('\n').toString();
     contents = converter.makeHtml(contents);
+    console.log('----------------')
     console.log(contents);
     // TODO: Replace text
     $inner.append(contents); // Append the contents for now
     state = 1;
   } else {
-
+    // TODO: Toggle back to markdown.
 
     state = 0;
   }
@@ -43,6 +48,7 @@ exports.postAceInit = function (hook, context) {
     $('.ep_gh_markdown').click(function () {
       toggleMarkdown(context, $inner);
     })
+
 
     var lineHasContent = false;
 
@@ -102,14 +108,11 @@ exports.postAceInit = function (hook, context) {
 var image = {
   removeImage: function(lineNumber){
     var documentAttributeManager = this.documentAttributeManager;
-
     // This errors for some reason..
     documentAttributeManager.removeAttributeOnLine(lineNumber, 'img'); // make the line a task list
   },
-
   addImage: function(rep, src){
     var documentAttributeManager = this.documentAttributeManager;
-
     // Get the line number
     var lineNumber = rep.selStart[0];
     // This errors for some reason..
@@ -119,7 +122,7 @@ var image = {
 }
 
 exports.aceEditorCSS = function (hook_name, cb) {
-  return ["/ep_gh_markdown/static/css/markdown.css"];
+  return ["/ep_gh_markdown/static/css/markdown.css", "/ep_gh_markdown/static/css/highlight.css"];
 } // inner pad CSS
 
 exports.aceAttribsToClasses = function (hook_name, context) {
@@ -134,13 +137,14 @@ exports.aceAttribsToClasses = function (hook_name, context) {
   if (key == 'title') return [value];
   if (key == 'code') return ['code'];
   if (key == 'blockquote') return ['blockquote'];
+  if (key == 'lang') return ['language-' + value];
 }
 
 exports.aceDomLineProcessLineAttributes = function (hook, context) {
   console.log('Process: ');
   console.log(context);
   console.log('----------------------------------------------------------------');
-  return undefined;
+
 }
 
 exports.aceDomLinePreProcessLineAttributes = function (hook, context) {
@@ -177,10 +181,13 @@ exports.aceCreateDomLine = function (hook, context) {
   var url = /(?:^| )url-(\S*)/.exec(cls);
   var code = /code/.exec(cls);
   var blockquote = /blockquote/.exec(cls);
+  var lang = /(?:^| )language-(\S*)/.exec(cls);
+  if (lang) lang = 'language-' + lang[1];
+  if (lang == null) lang = '';
   var modifier = {
     extraOpenTags: '',
     extraCloseTags: '',
-    cls: ''
+    cls: cls
   };
   if (url) {
     url = hasHttp(url[1]);
@@ -190,8 +197,9 @@ exports.aceCreateDomLine = function (hook, context) {
       cls: cls
     }
   }
-  if (code) modifier = { extraOpenTags: '<code>', extraCloseTags: '</code>', cls: cls };
-  if (blockquote) modifier = { extraOpenTags: '<blockquote><p>', extraCloseTags: '</p></blockquote>', cls: cls};
+  if (code) modifier = { extraOpenTags: '<code class="' + lang + '">', extraCloseTags: '</code>', cls: cls };
+  if (blockquote) modifier = { extraOpenTags: '<blockquote><p>', extraCloseTags: '</blockquote>', cls: cls};
+
   return [modifier];
 }
 
@@ -204,6 +212,13 @@ exports.acePostWriteDomLineHTML = function (hook, context) {
   console.log('PostWrite: ')
   console.log(context);
   console.log('----------------------------------------------------------------');
+  if (context.node.children) {
+    for (var child of context.node.children) {
+      if (child.nodeName === "CODE") {
+        hljs.highlightBlock(child);
+      }
+    }
+  }
 }
 
 exports.ccRegisterBlockElements = function (name, context) {
@@ -219,10 +234,13 @@ exports.collectContentPre = function (hook, context) {
   console.log('----------------------------------------------------------------');
   var cc = context.cc;
   var state = context.state;
+  var tname = context.tname;
   var url = /(?:^| )url-(\S*)/.exec(context.cls);
+  var lang = /(?:^| )language-(\S*)/.exec(context.cls);
   if (url) cc.doAttrib(state, "url::" + url[1]);
-  if (context.tname == "code") cc.doAttrib(state, "code");
-  if (context.tname == "blockquote") cc.doAttrib(state, "blockquote");
+  if (lang) cc.doAttrib(state, "lang::" + lang[1]);
+  if (tname == "code") cc.doAttrib(state, "code");
+  if (tname == "blockquote") cc.doAttrib(state, "blockquote");
 }
 
 exports.collectContentImage = function (name, context) {
