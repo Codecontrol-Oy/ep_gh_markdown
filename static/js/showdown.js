@@ -1447,7 +1447,7 @@ showdown.subParser('anchors', function (text, options, globals) {
       if (options.openLinksInNewWindow) {
         target = ' target="¨E95Eblank"';
       }
-      return st + '<a href="' + lnk + '"' + target + '>' + mentions + '</a>';
+      return st + '<a class="url-' + lnk + '" href="' + lnk + '"' + target + '>' + mentions + '</a>';
     });
   }
 
@@ -2462,9 +2462,9 @@ showdown.subParser('lists', function (text, options, globals) {
 
       // Support for github tasklists
       if (taskbtn && options.tasklists) {
-        bulletStyle = ' class="task-list-item" style="list-style-type: none;"';
+        bulletStyle = ' class="task-list-item"';
         item = item.replace(/^[ \t]*\[(x|X| )?]/m, function () {
-          var otp = '<input type="checkbox" disabled style="margin: 0px 0.35em 0.25em -1.6em; vertical-align: middle;"';
+          var otp = '<input class="tasklist" type="checkbox" disabled style="margin: 0px 0.35em 0.25em -1.6em; vertical-align: middle;"';
           if (checked) {
             otp += ' checked';
           }

@@ -22,7 +22,7 @@ function toggleMarkdown(context, $inner) {
       text = text.replace(/(>\s*)(-)/, '$1&ndash;');
       contents.push(text);
       
-      if (~text.indexOf("#") || text === '') contents.push('<p></p>');
+      if (text === '') contents.push('\n');
       console.log(text);
     });
     // Join the text and convert to html with showdown lib
@@ -161,7 +161,6 @@ exports.aceDomLinePreProcessLineAttributes = function (hook, context) {
     postHtml: '',
     processedMarker: false
   };
-
   if (img) {
     img = hasHttp(img[1]);
     modifier = {
@@ -187,15 +186,12 @@ exports.aceCreateDomLine = function (hook, context) {
   var modifier = {
     extraOpenTags: '',
     extraCloseTags: '',
-    cls: cls
+    cls: ''
   };
-  if (url) {
+  console.log(url);
+  if (url !== null) {
     url = hasHttp(url[1]);
-    modifier = {
-      extraOpenTags: '<a href="' + url + '">',
-      extraCloseTags: '</a>',
-      cls: cls
-    }
+    modifier = { extraOpenTags: '<a href="' + url + '">', extraCloseTags: '</a>', cls: cls }
   }
   if (code) modifier = { extraOpenTags: '<code class="' + lang + '">', extraCloseTags: '</code>', cls: cls };
   if (blockquote) modifier = { extraOpenTags: '<blockquote><p>', extraCloseTags: '</blockquote>', cls: cls};
@@ -222,9 +218,6 @@ exports.acePostWriteDomLineHTML = function (hook, context) {
 }
 
 exports.ccRegisterBlockElements = function (name, context) {
-  console.log("ccRegisterBlock: ");
-  console.log(context);
-  console.log('-----------------------------------------------------------------');
   return ['img'];
 }
 
