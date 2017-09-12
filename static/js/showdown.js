@@ -185,8 +185,8 @@ var showdown = {},
         excludeTrailingPunctuationFromURLs:   true,
         literalMidWordUnderscores:            true,
         strikethrough:                        true,
-        tables:                               true,
-        tablesHeaderId:                       true,
+        tables:                               false,
+        tablesHeaderId:                       false,
         ghCodeBlocks:                         true,
         tasklists:                            true,
         disableForced4SpacesIndentedSublists: true,
@@ -2116,7 +2116,7 @@ showdown.subParser('headers', function (text, options, globals) {
     var spanGamut = showdown.subParser('spanGamut')(m1, options, globals),
         hID = (options.noHeaderId) ? '' : ' id="' + headerId(m1) + '"',
         hLevel = headerLevelStart,
-        hashBlock = '<h' + hLevel + hID + '>' + spanGamut + '</h' + hLevel + '>';
+        hashBlock = '<h' + hLevel + hID + '>' + spanGamut + '</h' + hLevel + '><br />';
     return showdown.subParser('hashBlock')(hashBlock, options, globals);
   });
 
@@ -2124,7 +2124,7 @@ showdown.subParser('headers', function (text, options, globals) {
     var spanGamut = showdown.subParser('spanGamut')(m1, options, globals),
         hID = (options.noHeaderId) ? '' : ' id="' + headerId(m1) + '"',
         hLevel = headerLevelStart + 1,
-        hashBlock = '<h' + hLevel + hID + '>' + spanGamut + '</h' + hLevel + '>';
+        hashBlock = '<h' + hLevel + hID + '>' + spanGamut + '</h' + hLevel + '><br />';
     return showdown.subParser('hashBlock')(hashBlock, options, globals);
   });
 
@@ -2146,7 +2146,7 @@ showdown.subParser('headers', function (text, options, globals) {
     var span = showdown.subParser('spanGamut')(hText, options, globals),
         hID = (options.noHeaderId) ? '' : ' id="' + headerId(m2) + '"',
         hLevel = headerLevelStart - 1 + m1.length,
-        header = '<h' + hLevel + hID + '>' + span + '</h' + hLevel + '>';
+        header = '<h' + hLevel + hID + '>' + span + '</h' + hLevel + '><br />';
 
     return showdown.subParser('hashBlock')(header, options, globals);
   });

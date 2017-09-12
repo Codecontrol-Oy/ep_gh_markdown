@@ -2,6 +2,21 @@ var underscore = require('ep_etherpad-lite/static/js/underscore');
 var padeditor = require('ep_etherpad-lite/static/js/pad_editor').padeditor;
 var padEditor;
 var state = 0;
+var image = {
+  removeImage: function(lineNumber){
+    var documentAttributeManager = this.documentAttributeManager;
+    // This errors for some reason..
+    documentAttributeManager.removeAttributeOnLine(lineNumber, 'img'); // make the line a task list
+  },
+  addImage: function(rep, src){
+    var documentAttributeManager = this.documentAttributeManager;
+    // Get the line number
+    var lineNumber = rep.selStart[0];
+    // This errors for some reason..
+    src = "<img src="+src+">";
+    documentAttributeManager.setAttributeOnLine(lineNumber, 'img', src); // make the line a task list
+  }
+}
 
 exports.aceInitialized = function(hook, context){
   var editorInfo = context.editorInfo;
@@ -9,48 +24,68 @@ exports.aceInitialized = function(hook, context){
   editorInfo.ace_removeImage = underscore(image.removeImage).bind(context);
 }
 
-function toggleMarkdown(context, $inner) {
-  var converter = new showdown.Converter();
-      converter.setFlavor('github');
-  // State == 0 Convert md to html
-  // else html to md
-  if (state == 0) {
-    var contents = [];
-    // Map through each magicdiv within ace body and get the text
-    $inner.children('div').each(function () {
-      var text = $(this).text();
-      text = text.replace(/(>\s*)(-)/, '$1&ndash;');
-      contents.push(text);
-      
-      if (~text.indexOf("#") || text === '') contents.push('<p></p>');
-      console.log(text);
-    });
-    // Join the text and convert to html with showdown lib
-    contents = contents.join('\n').toString();
-    contents = converter.makeHtml(contents);
-    console.log('----------------')
-    console.log(contents);
-    // TODO: Replace text
-    $inner.append(contents); // Append the contents for now
-    state = 1;
-  } else {
-    // TODO: Toggle back to markdown.
-
-    state = 0;
-  }
-}
-
 exports.postAceInit = function (hook, context) {
   context.ace.callWithAce(function (ace) {
     var doc = ace.ace_getDocument();
     var $inner = $(doc).find('#innerdocbody');
+    var lineHasContent = false;
     
     $('.ep_gh_markdown').click(function () {
-      toggleMarkdown(context, $inner);
+      var confirmed = confirm("Convert from markdown?\nWARNING! This cannot be undone!")
+      if (confirmed) toggleMarkdown(context, $inner);
     })
 
+    // This is not hacky at all.
+    // Get html content of body, strip span and s tags -> convert html to md
+    // Create uri from md string and make temp link, sim click and download the .md file
+    $("#export_md").click(function () {
+      var md = [];
+      console.log($inner.find('div'));
+      $($inner).find('div:not(".original")').each(function () {
+        var magicChild = $(this).html();
+        var stripped = magicChild.replace(/(<span class=".+?">)(.*?)(<\/span>)/g, '$2');
+        stripped = stripped.replace(/(<s>)(.*?)(<\/s>)/g, "~~$2~~");
+        console.log(stripped);
+        stripped = stripped.replace("", "\n");
+        md.push(toMarkdown(stripped));
+      });
+      mdString = md.join('\n');
+      var uriContent = "data:application/octet-stream," + encodeURIComponent(mdString);
+      var link = document.createElement("a");    
+      link.href = uriContent;
+      link.style = "visibility:hidden";
+      link.download = "markdown.md";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    })
 
-    var lineHasContent = false;
+    var markdown = {
+      enable: function() {
+        $($inner).addClass("markdown"); // add css class markdown
+        $('#underline').hide(); // no markdown support for these
+        $('#strikethrough').hide();
+      },
+      disable: function() {
+        $($inner).removeClass("markdown"); // add css class markdown
+        $('#underline').removeAttr('style'); // no markdown support for these
+        $('#strikethrough').removeAttr('style');
+      }
+    }
+
+    if($('#options-markdown').is(':checked')) {
+      markdown.enable();
+    } else {
+      markdown.disable();
+    }
+    /* on click */
+    $('#options-markdown').on('click', function() {
+      if($('#options-markdown').is(':checked')) {
+        markdown.enable();
+      } else {
+        markdown.disable();
+      }
+    });
 
     $inner.on("drop", function (e) {
       e = e.originalEvent;
@@ -84,6 +119,7 @@ exports.postAceInit = function (hook, context) {
     // Note we check the line number has actually changed, if not a drag start/end
     // to the same location would cause the image to be deleted!
     $inner.on("dragend", ".image", function (e) {
+      console.log('dragend');
       var id = e.currentTarget.id;
       var imageContainer = $inner.find("#" + id);
       var imageLine = $inner.find("." + id).parents("div");
@@ -98,33 +134,77 @@ exports.postAceInit = function (hook, context) {
           ace.ace_removeImage(oldLineNumber);
         }
       }, 'img', true);
-
       // TODO, if the image is moved only one line up it will create a duplicate
       // IF the line is already populated, nothing much I can do about that for now
     })
-  }, "image", true);
+  }, 'img', true);
 }
 
-var image = {
-  removeImage: function(lineNumber){
-    var documentAttributeManager = this.documentAttributeManager;
-    // This errors for some reason..
-    documentAttributeManager.removeAttributeOnLine(lineNumber, 'img'); // make the line a task list
-  },
-  addImage: function(rep, src){
-    var documentAttributeManager = this.documentAttributeManager;
-    // Get the line number
-    var lineNumber = rep.selStart[0];
-    // This errors for some reason..
-    src = "<img src="+src+">";
-    documentAttributeManager.setAttributeOnLine(lineNumber, 'img', src); // make the line a task list
+function toggleMarkdown(context, $inner) {
+  var converter = new showdown.Converter();
+      converter.setFlavor('github');
+    // Add the markdownText class to original text before converting and hide it
+    $($inner).find('div').addClass("original");
+    var contents = [];
+    // Map through each magicdiv within ace body and get the text
+    $inner.children('div:not(".converted")').each(function () {
+      var text = $(this).text();
+      text = text.replace(/(>\s*)(-)/, '$1&ndash;'); // Replace - with ndash when in blockquote so we don't make a list accidentally.
+      contents.push(text); 
+      if (text === '') contents.push('<p></p>');
+    });
+    // Join the text and convert to html with showdown.js
+    contents = contents.join('\n').toString();
+    contents = converter.makeHtml(contents);
+    $($inner).find('.original').remove();
+    $inner.append(contents);
+    state = 1;
+}
+
+exports.acePostWriteDomLineHTML = function (hook, context) {
+  // After the node has been written detect code block and use highlight.js to add styles for it.
+  if (context.node.children) {
+    for (var child of context.node.children) {
+      if (child.nodeName === "CODE") {
+        hljs.highlightBlock(child);
+      }
+    }
   }
 }
 
-exports.aceEditorCSS = function (hook_name, cb) {
-  return ["/ep_gh_markdown/static/css/markdown.css", "/ep_gh_markdown/static/css/highlight.css"];
-} // inner pad CSS
+// Register image tags so we can collect the content
+exports.ccRegisterBlockElements = function (name, context) {
+  return ['img'];
+}
 
+// Collect contents from converted html and add attributes
+exports.collectContentPre = function (hook, context) {
+  var cc = context.cc;
+  var state = context.state;
+  var tname = context.tname;
+  var url = /(?:^| )url-(\S*)/.exec(context.cls);
+  var lang = /(?:^| )language-(\S*)/.exec(context.cls);
+
+  if (url) cc.doAttrib(state, "url::" + url[1]);
+  if (lang) cc.doAttrib(state, "lang::" + lang[1]);
+  if (tname == "code") cc.doAttrib(state, "code");
+  if (tname == "blockquote") cc.doAttrib(state, "blockquote");
+}
+
+exports.collectContentImage = function (name, context) {
+  console.log('collect image')
+  console.log(context);
+  var tname = context.tname;
+  var state = context.state;
+  var node = context.node;
+
+  if (tname == "img") {
+    if (node.src) state.lineAttributes['img'] = 'img-' + node.src;
+    if (node.alt) state.lineAttributes['alt'] = 'alt-' + node.alt;
+  }
+}
+
+// Convert the attributes to classes so we can catch them @ createDomLine fn
 exports.aceAttribsToClasses = function (hook_name, context) {
   console.log('AttrToClasses: ');
   console.log(context);
@@ -134,17 +214,9 @@ exports.aceAttribsToClasses = function (hook_name, context) {
   if (key == 'url') return ['url-' + value];
   if (key == 'img') return [value];
   if (key == 'alt') return [value];
-  if (key == 'title') return [value];
   if (key == 'code') return ['code'];
   if (key == 'blockquote') return ['blockquote'];
   if (key == 'lang') return ['language-' + value];
-}
-
-exports.aceDomLineProcessLineAttributes = function (hook, context) {
-  console.log('Process: ');
-  console.log(context);
-  console.log('----------------------------------------------------------------');
-
 }
 
 exports.aceDomLinePreProcessLineAttributes = function (hook, context) {
@@ -173,10 +245,8 @@ exports.aceDomLinePreProcessLineAttributes = function (hook, context) {
   return [modifier];
 }
 
+// Check the classes and add required tags
 exports.aceCreateDomLine = function (hook, context) {
-  console.log('CreateDOM: ');
-  console.log(context);
-  console.log('----------------------------------------------------------------');
   var cls = context.cls;
   var url = /(?:^| )url-(\S*)/.exec(cls);
   var code = /code/.exec(cls);
@@ -208,51 +278,6 @@ function hasHttp(url) {
   return url;
 }
 
-exports.acePostWriteDomLineHTML = function (hook, context) {
-  console.log('PostWrite: ')
-  console.log(context);
-  console.log('----------------------------------------------------------------');
-  if (context.node.children) {
-    for (var child of context.node.children) {
-      if (child.nodeName === "CODE") {
-        hljs.highlightBlock(child);
-      }
-    }
-  }
-}
-
-exports.ccRegisterBlockElements = function (name, context) {
-  console.log("ccRegisterBlock: ");
-  console.log(context);
-  console.log('-----------------------------------------------------------------');
-  return ['img'];
-}
-
-exports.collectContentPre = function (hook, context) {
-  console.log('PreCollect: ');
-  console.log(context);
-  console.log('----------------------------------------------------------------');
-  var cc = context.cc;
-  var state = context.state;
-  var tname = context.tname;
-  var url = /(?:^| )url-(\S*)/.exec(context.cls);
-  var lang = /(?:^| )language-(\S*)/.exec(context.cls);
-  if (url) cc.doAttrib(state, "url::" + url[1]);
-  if (lang) cc.doAttrib(state, "lang::" + lang[1]);
-  if (tname == "code") cc.doAttrib(state, "code");
-  if (tname == "blockquote") cc.doAttrib(state, "blockquote");
-}
-
-exports.collectContentImage = function (name, context) {
-  console.log('CollectImageContent: ');
-  console.log(context);
-  console.log('-----------------------------------------------------------------');
-  var tname = context.tname;
-  var state = context.state;
-  var node = context.node;
-  if (tname == "img") {
-    if (node.src) state.lineAttributes['img'] = 'img-' + node.src;
-    if (node.alt) state.lineAttributes['alt'] = 'alt-' + node.alt;
-    if (node.title) state.lineAttributes['title'] = 'title-' + node.title;
-  }
-}
+exports.aceEditorCSS = function (hook_name, cb) {
+  return ["/ep_gh_markdown/static/css/markdown.css", "/ep_gh_markdown/static/css/highlight.css"];
+} // inner pad CSS
