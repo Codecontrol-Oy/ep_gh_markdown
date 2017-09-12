@@ -32,7 +32,10 @@ exports.postAceInit = function (hook, context) {
     
     $('.ep_gh_markdown').click(function () {
       var confirmed = confirm("Convert from markdown?\nWARNING! This cannot be undone!")
-      if (confirmed) toggleMarkdown(context, $inner);
+      if (confirmed) {
+        toggleMarkdown(context, $inner);
+        $(this).addClass('clicked'); // Tests need this
+      } 
     })
 
     // This is not hacky at all.
@@ -46,7 +49,7 @@ exports.postAceInit = function (hook, context) {
         var stripped = magicChild.replace(/(<span class=".+?">)(.*?)(<\/span>)/g, '$2');
         stripped = stripped.replace(/(<s>)(.*?)(<\/s>)/g, "~~$2~~");
         console.log(stripped);
-        stripped = stripped.replace("", "\n");
+        stripped = stripped.replace("", "<p></p>");
         md.push(toMarkdown(stripped));
       });
       mdString = md.join('\n');
@@ -151,7 +154,7 @@ function toggleMarkdown(context, $inner) {
       var text = $(this).text();
       text = text.replace(/(>\s*)(-)/, '$1&ndash;'); // Replace - with ndash when in blockquote so we don't make a list accidentally.
       contents.push(text); 
-      if (text === '') contents.push('<p></p>');
+      if (text.trim()) contents.push('<br />');
     });
     // Join the text and convert to html with showdown.js
     contents = contents.join('\n').toString();
