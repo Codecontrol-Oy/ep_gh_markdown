@@ -19,9 +19,7 @@
         "eejsBlock_dd_format":"ep_gh_markdown/index",
         "eejsBlock_scripts": "ep_gh_markdown/index",
         "eejsBlock_mySettings": "ep_gh_markdown/index",
-        "eejsBlock_exportColumn": "ep_gh_markdown/index",
-        "getLineHTMLForExport": "ep_gh_markdown/export",
-        "expressCreateServer": "ep_gh_markdown/express"
+        "eejsBlock_exportColumn": "ep_gh_markdown/index"
       }
     }
   ]
