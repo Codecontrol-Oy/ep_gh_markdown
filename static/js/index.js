@@ -251,7 +251,6 @@ exports.aceCreateDomLine = function (hook, context) {
   var code = /code/.exec(cls);
   var blockquote = /blockquote/.exec(cls);
   var lang = /(?:^| )language-(\S*)/.exec(cls);
-  var hr = /hr/.exec(cls);
   if (lang) lang = 'language-' + lang[1];
   if (lang == null) lang = '';
   var modifier = {
