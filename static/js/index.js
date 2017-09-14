@@ -121,7 +121,6 @@ exports.postAceInit = function (hook, context) {
     // Note we check the line number has actually changed, if not a drag start/end
     // to the same location would cause the image to be deleted!
     $inner.on("dragend", ".image", function (e) {
-      console.log('dragend');
       var id = e.currentTarget.id;
       var imageContainer = $inner.find("#" + id);
       var imageLine = $inner.find("." + id).parents("div");
@@ -161,14 +160,12 @@ function toggleMarkdown(context, $inner) {
       }
       text = text.replace(/[\u00A0 \t]+$/igm, '') // Trim trailing whitespace
       if (/^>/igm.test(text)) text += ' '; // For some _really_ odd reason, if blockquote string does not have trailing space, last bq line will be ignored.
-      console.log(text);
       contents.push(text);
       
     });
     // Join the text and convert to html with showdown.js
     contents = contents.join('\n').toString();
     contents = converter.makeHtml(contents);
-    console.log(contents);
     $($inner).find('.original').remove();
     $inner.append(contents);
 }
@@ -196,7 +193,6 @@ exports.collectContentPre = function (hook, context) {
   var tname = context.tname;
   var url = /(?:^| )url-(\S*)/.exec(context.cls);
   var lang = /(?:^| )language-(\S*)/.exec(context.cls);
-  console.log(context);
   if (url) cc.doAttrib(state, "url::" + url[1]);
   if (lang) cc.doAttrib(state, "lang::" + lang[1]);
   if (tname == "code") cc.doAttrib(state, "code");
@@ -252,7 +248,6 @@ exports.aceDomLinePreProcessLineAttributes = function (hook, context) {
 
 // Check the classes and add required tags
 exports.aceCreateDomLine = function (hook, context) {
-  console.log(context);
   var cls = context.cls;
   var url = /(?:^| )url-(\S*)/.exec(cls);
   var code = /code/.exec(cls);
