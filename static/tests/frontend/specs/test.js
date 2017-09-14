@@ -42,7 +42,6 @@ describe("Convert from markdown", function(){
 			}).done(function () {
 				helper.waitFor(function () {
 					var $firstHeading = inner$('div:not(".primary-none")').first();
-					console.log($firstHeading.html());
 					var hasHeading = $firstHeading.find("h1").length;
 					return hasHeading == 1;
 				}).done(function () {
@@ -52,7 +51,6 @@ describe("Convert from markdown", function(){
 					var $incorrect = inner$("div:eq(6)");
 					var $multiplespaces = inner$("div:eq(7)");
 					var $alth1 = inner$("div:eq(9)");
-					console.log($h5.html());
 					expect($h2.find("h2").length).to.be(1);
 					expect($h5.find("h5").length).to.be(1);
 					expect($incorrect.find("h1").length).to.be(0);
@@ -160,7 +158,6 @@ describe("Convert from markdown", function(){
 					var $bracket = $inline.next();
 					var $ref = $bracket.next();
 					var $regular = inner$('div:not(".primary-none")').last();
-					console.log($ref.find("a").attr("href"));
 					expect($first.attr("href") === "https://google.com" && $first.text() === "url").to.be(true);
 					expect($inline.find("a").attr("href") === "https://www.google.com" && $inline.text() === "Inline link with title.").to.be(true);
 					expect($bracket.find("a").attr("href") === "https://www.google.com" && $bracket.text() === "https://www.google.com").to.be(true);
@@ -220,7 +217,6 @@ describe("Convert from markdown", function(){
 					var $asterisk = $empty.next();
 					var $minus = $asterisk.next();
 					var $plus = $minus.next();
-					console.log($third.text())
 
 					expect($first.find("ol").hasClass("list-number1") && $first.text() === "First ").to.be(true);
 					expect($olsub.find("ol").hasClass("list-number2") && $olsub.text() === "OL Sub").to.be(true);
@@ -254,7 +250,6 @@ describe("Convert from markdown", function(){
 		// User needs to press ok, cancel fails the test..
 		helper.waitFor(function () { // Wait until all text is written
 			var $last = inner$('div:not(".primary-none")').last();
-			console.log($last.text());
 			return $last.text() == `[logo]: ${imgSrc} "Logo Title Text 2"`;
 		}).done(function () {
 			var $mdBtn = chrome$(".ep_gh_markdown");
@@ -271,7 +266,6 @@ describe("Convert from markdown", function(){
 					var $first = inner$('div').first();
 					var $empty = inner$('div:eq(2)');
 					var $second = $empty.next();
-					console.log($second);
 					expect($first.find("img").length).to.be(1);
 					expect($first.find("img").attr("src") === imgSrc).to.be(true);
 					expect($empty.hasClass("primary-none")).to.be(true);
@@ -306,7 +300,6 @@ describe("Convert from markdown", function(){
 		// User needs to press ok, cancel fails the test..
 		helper.waitFor(function () { // Wait until all text is written
 			var $last = inner$('div:not(".primary-none")').last();
-			console.log($last.text());
 			return $last.text() == "```";
 		}).done(function () {
 			var $mdBtn = chrome$(".ep_gh_markdown");
@@ -357,7 +350,6 @@ describe("Convert from markdown", function(){
 		// User needs to press ok, cancel fails the test..
 		helper.waitFor(function () { // Wait until all text is written
 			var $last = inner$('div:not(".primary-none")').last();
-			console.log($last.text());
 			return $last.text() == "> - Should not be list";
 		}).done(function () {
 			var $mdBtn = chrome$(".ep_gh_markdown");
