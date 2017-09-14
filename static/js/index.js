@@ -183,7 +183,7 @@ exports.acePostWriteDomLineHTML = function (hook, context) {
 
 // Register image tags so we can collect the content
 exports.ccRegisterBlockElements = function (name, context) {
-  return ['img', 'hr'];
+  return ['img'];
 }
 
 // Collect contents from converted html and add attributes
@@ -197,7 +197,6 @@ exports.collectContentPre = function (hook, context) {
   if (lang) cc.doAttrib(state, "lang::" + lang[1]);
   if (tname == "code") cc.doAttrib(state, "code");
   if (tname == "blockquote") cc.doAttrib(state, "blockquote");
-  if (tname == "horizontal") cc.doAttrib(state, "hr");
 }
 
 exports.collectContentImage = function (name, context) {
@@ -221,7 +220,6 @@ exports.aceAttribsToClasses = function (hook_name, context) {
   if (key == 'code') return ['code'];
   if (key == 'blockquote') return ['blockquote'];
   if (key == 'lang') return ['language-' + value];
-  if (key == 'hr') return ['hr'];
 }
 
 exports.aceDomLinePreProcessLineAttributes = function (hook, context) {
@@ -271,7 +269,6 @@ exports.aceCreateDomLine = function (hook, context) {
   }
   if (code) modifier = { extraOpenTags: '<code class="' + lang + '">', extraCloseTags: '</code>', cls: cls };
   if (blockquote) modifier = { extraOpenTags: '<blockquote>', extraCloseTags: '</blockquote>', cls: cls};
-  if (hr) modifier = { extraOpenTags: '<hr />', extraCloseTags: '', cls: cls};
 
   return [modifier];
 }
