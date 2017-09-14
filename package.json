@@ -24,6 +24,9 @@
     "name": "Samuli Polvi",
     "email": "samuli.polvi@codecontrol.fi"
   },
+  "contributors" : [
+    { "name" : "Toni Iltanen", "email" : "toni.iltanen@codecontrol.fi" }
+  ],
   "bundleDependencies": false,
   "contributors": [],
   "deprecated": false,
