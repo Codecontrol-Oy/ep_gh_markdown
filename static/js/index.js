@@ -1,7 +1,6 @@
 var underscore = require('ep_etherpad-lite/static/js/underscore');
 var padeditor = require('ep_etherpad-lite/static/js/pad_editor').padeditor;
 var padEditor;
-var state = 0;
 var image = {
   removeImage: function(lineNumber){
     var documentAttributeManager = this.documentAttributeManager;
@@ -32,21 +31,24 @@ exports.postAceInit = function (hook, context) {
     
     $('.ep_gh_markdown').click(function () {
       var confirmed = confirm("Convert from markdown?\nWARNING! This cannot be undone!")
-      if (confirmed) toggleMarkdown(context, $inner);
+      if (confirmed) {
+        toggleMarkdown(context, $inner);
+        $(this).addClass('clicked'); // Tests need this
+      } 
     })
 
     // This is not hacky at all.
     // Get html content of body, strip span and s tags -> convert html to md
     // Create uri from md string and make temp link, sim click and download the .md file
+    // This is the simplest way to get html content of the pad for conversion.
+    // Also allows us to add file extensions.
     $("#export_md").click(function () {
       var md = [];
-      console.log($inner.find('div'));
       $($inner).find('div:not(".original")').each(function () {
         var magicChild = $(this).html();
         var stripped = magicChild.replace(/(<span class=".+?">)(.*?)(<\/span>)/g, '$2');
         stripped = stripped.replace(/(<s>)(.*?)(<\/s>)/g, "~~$2~~");
-        console.log(stripped);
-        stripped = stripped.replace("", "\n");
+        stripped = stripped.replace("", "<p></p>");
         md.push(toMarkdown(stripped));
       });
       mdString = md.join('\n');
@@ -119,7 +121,6 @@ exports.postAceInit = function (hook, context) {
     // Note we check the line number has actually changed, if not a drag start/end
     // to the same location would cause the image to be deleted!
     $inner.on("dragend", ".image", function (e) {
-      console.log('dragend');
       var id = e.currentTarget.id;
       var imageContainer = $inner.find("#" + id);
       var imageLine = $inner.find("." + id).parents("div");
@@ -143,22 +144,30 @@ exports.postAceInit = function (hook, context) {
 function toggleMarkdown(context, $inner) {
   var converter = new showdown.Converter();
       converter.setFlavor('github');
-    // Add the markdownText class to original text before converting and hide it
+    // Add identifying class to original text before converting and hide it
     $($inner).find('div').addClass("original");
     var contents = [];
+    var inCode = false;
+
     // Map through each magicdiv within ace body and get the text
-    $inner.children('div:not(".converted")').each(function () {
+    $inner.children('div').each(function () {
       var text = $(this).text();
-      text = text.replace(/(>\s*)(-)/, '$1&ndash;'); // Replace - with ndash when in blockquote so we don't make a list accidentally.
-      contents.push(text); 
-      if (text === '') contents.push('<p></p>');
+      text = text.replace(/(>\s*)(-)/, '$1&ndash;'); // Replace - with ndash when in blockquote so we don't make accidental lists.
+      if (/^```/igm.test(text)) inCode = inCode ? false : true;
+      if (!inCode && !/^>/.test(text)) {
+        if (text.replace(/\s/g, '').length) text += '\n<br>'; // Force linebreak after each line
+        else text = '<p><br></p>'; // If text is a newline or contains only spaces feed new line (<br> wont work because we need to 'break' the last element)
+      }
+      text = text.replace(/[\u00A0 \t]+$/igm, '') // Trim trailing whitespace
+      if (/^>/igm.test(text)) text += ' '; // For some _really_ odd reason, if blockquote string does not have trailing space, last bq line will be ignored.
+      contents.push(text);
+      
     });
     // Join the text and convert to html with showdown.js
     contents = contents.join('\n').toString();
     contents = converter.makeHtml(contents);
     $($inner).find('.original').remove();
     $inner.append(contents);
-    state = 1;
 }
 
 exports.acePostWriteDomLineHTML = function (hook, context) {
@@ -184,7 +193,6 @@ exports.collectContentPre = function (hook, context) {
   var tname = context.tname;
   var url = /(?:^| )url-(\S*)/.exec(context.cls);
   var lang = /(?:^| )language-(\S*)/.exec(context.cls);
-
   if (url) cc.doAttrib(state, "url::" + url[1]);
   if (lang) cc.doAttrib(state, "lang::" + lang[1]);
   if (tname == "code") cc.doAttrib(state, "code");
@@ -192,8 +200,6 @@ exports.collectContentPre = function (hook, context) {
 }
 
 exports.collectContentImage = function (name, context) {
-  console.log('collect image')
-  console.log(context);
   var tname = context.tname;
   var state = context.state;
   var node = context.node;
@@ -206,9 +212,6 @@ exports.collectContentImage = function (name, context) {
 
 // Convert the attributes to classes so we can catch them @ createDomLine fn
 exports.aceAttribsToClasses = function (hook_name, context) {
-  console.log('AttrToClasses: ');
-  console.log(context);
-  console.log('----------------------------------------------------------------');
   var key = context.key;
   var value = context.value;
   if (key == 'url') return ['url-' + value];
@@ -220,11 +223,7 @@ exports.aceAttribsToClasses = function (hook_name, context) {
 }
 
 exports.aceDomLinePreProcessLineAttributes = function (hook, context) {
-  console.log('Preprocess: ')
-  console.log(context);
-  console.log('----------------------------------------------------------------');
   var cls = context.cls;
-
   var img = /(?:^| )img-(\S*)/.exec(cls);
   var alt = /(?:^| )alt-(\S*)/.exec(cls);
   if (alt) alt = alt[1];
@@ -268,7 +267,7 @@ exports.aceCreateDomLine = function (hook, context) {
     }
   }
   if (code) modifier = { extraOpenTags: '<code class="' + lang + '">', extraCloseTags: '</code>', cls: cls };
-  if (blockquote) modifier = { extraOpenTags: '<blockquote><p>', extraCloseTags: '</blockquote>', cls: cls};
+  if (blockquote) modifier = { extraOpenTags: '<blockquote>', extraCloseTags: '</blockquote>', cls: cls};
 
   return [modifier];
 }

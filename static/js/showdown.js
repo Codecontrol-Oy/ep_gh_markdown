@@ -13,6 +13,11 @@ function getDefaultOpts (simple) {
       describe: 'Omit the default extra whiteline added to code blocks',
       type: 'boolean'
     },
+    convertHr: {
+      defaultValue: false,
+      describe: 'Turn on/off horizontal line breaks',
+      type: 'boolean'
+    },
     noHeaderId: {
       defaultValue: false,
       describe: 'Turn on/off generated header id',
@@ -188,7 +193,7 @@ var showdown = {},
         tables:                               false,
         tablesHeaderId:                       false,
         ghCodeBlocks:                         true,
-        tasklists:                            true,
+        tasklists:                            false,
         disableForced4SpacesIndentedSublists: true,
         simpleLineBreaks:                     true,
         requireSpaceBeforeHeadingText:        true,
@@ -2222,10 +2227,13 @@ showdown.subParser('headers', function (text, options, globals) {
 });
 
 /**
- * Turn Markdown link shortcuts into XHTML <a> tags.
+ * Turn Markdown horizontal rule shortcuts into <hr /> tags.
  */
 showdown.subParser('horizontalRule', function (text, options, globals) {
   'use strict';
+  if (!options.convertHr) {
+    return text;
+  }
   text = globals.converter._dispatch('horizontalRule.before', text, options, globals);
 
   var key = showdown.subParser('hashBlock')('<hr />', options, globals);
@@ -2697,7 +2705,7 @@ showdown.subParser('runExtension', function (ext, text, options, globals) {
     }
     text = text.replace(re, ext.replace);
   }
-
+  text += '<br>';
   return text;
 });
 
